@@ -215,10 +215,10 @@ values (1, 1),
        (6, 2),
        (7, 2);
 # 错误理解，没考虑‘连续’，没做出来，QAQ，理解错题意
-SELECT
-    c.Num as ConsecutiveNums
-FROM (select Num,count(1) as cou
-      from Logs group by Num) as c
+SELECT c.Num as ConsecutiveNums
+FROM (select Num, count(1) as cou
+      from Logs
+      group by Num) as c
 WHERE c.cou >= 3;
 
 # 官方答案一 通过计数中间表统计连续数量
@@ -237,13 +237,11 @@ WHERE c.cou >= 3;
 #      ) a
 # WHERE a.n >= 3
 # 官方答案二 通过自关联连续id值是否相等计算（弊端：id必须连续）
-SELECT
-
-    DISTINCT
-    l1.Num AS ConsecutiveNums
-FROM Logs l1,Logs l2, Logs l3
-WHERE
-        l1.Id = l2.Id -1
+SELECT DISTINCT l1.Num AS ConsecutiveNums
+FROM Logs l1,
+     Logs l2,
+     Logs l3
+WHERE l1.Id = l2.Id - 1
   and l2.Id = l3.Id - 1
   AND l1.Num = l2.Num
   AND l2.Num = l3.Num;
@@ -264,4 +262,220 @@ WHERE
 +----------+
 | Joe      |
 +----------+
+*/
+create table Employee
+(
+    Id        int,
+    Name      varchar(20),
+    Salary    bigint,
+    ManagerId int,
+    primary key (Id)
+);
+insert into Employee(Id, Name, Salary, ManagerId)
+values (1, 'Joe', 70000, 3),
+       (2, 'Henry', 80000, 4),
+       (3, 'Sam', 60000, NULL),
+       (4, 'Max', 90000, NULL);
+select e1.Name as Employee
+from Employee e1,
+     Employee e2
+where e1.ManagerId = e2.Id
+  and e1.Salary > e2.Salary;
+select e1.Name as Employee
+from Employee e1
+         left join Employee e2 on e1.ManagerId = e2.Id and e1.Salary > e2.Salary
+/*编写一个 SQL 查询，查找 Person 表中所有重复的电子邮箱。
+
+示例：
+
++----+---------+
+| Id | Email   |
++----+---------+
+| 1  | a@b.com |
+| 2  | c@d.com |
+| 3  | a@b.com |
++----+---------+
+根据以上输入，你的查询应返回以下结果：
+
++---------+
+| Email   |
++---------+
+| a@b.com |
++---------+
+*/
+create table Person
+(
+    Id    int,
+    Email varchar(20),
+    primary key (Id)
+);
+insert into Person(Id, Email)
+values (1, 'a@b.com'),
+       (2, 'c@d.com'),
+       (3, 'a@b.com');
+# 我的解，直观子查询
+# SELECT e.Email
+# from (select count(1) as con, Email from Person group by Email) as e
+# WHERE e.con > 1;
+# 官方解 利用having子句替换
+# select Email
+# from Person
+# group by Email
+# having count(Email) > 1;
+
+/*某网站包含两个表，Customers 表和 Orders 表。编写一个 SQL 查询，找出所有从不订购任何东西的客户。
+
+Customers 表：
+
++----+-------+
+| Id | Name  |
++----+-------+
+| 1  | Joe   |
+| 2  | Henry |
+| 3  | Sam   |
+| 4  | Max   |
++----+-------+
+Orders 表：
+
++----+------------+
+| Id | CustomerId |
++----+------------+
+| 1  | 3          |
+| 2  | 1          |
++----+------------+
+例如给定上述表格，你的查询应返回：
+
++-----------+
+| Customers |
++-----------+
+| Henry     |
+| Max       |
++-----------+
+*/
+create table Customers
+(
+    Id   int,
+    Name varchar(20),
+    primary key (Id)
+);
+create table Orders
+(
+    Id         int,
+    CustomerId int,
+    primary key (Id)
+);
+insert into Customers (Id, Name)
+values (1, 'Joe'),
+       (2, 'Henry'),
+       (3, 'Sam'),
+       (4, 'Max');
+insert into Orders(Id, CustomerId)
+VALUES (1, 3),
+       (2, 1);
+# 我的解
+select c.Name as Customers
+from Customers c
+         left join Orders o on c.Id = o.CustomerId
+where o.Id is null;
+# 官方解
+select Customers.name as 'Customers'
+from Customers
+where Customers.id not in
+      (
+          select CustomerId
+          from Orders
+      );
+
+/*Employee 表包含所有员工信息，每个员工有其对应的 Id, salary 和 department Id。
+
++----+-------+--------+--------------+
+| Id | Name  | Salary | DepartmentId |
++----+-------+--------+--------------+
+| 1  | Joe   | 70000  | 1            |
+| 2  | Henry | 80000  | 2            |
+| 3  | Sam   | 60000  | 2            |
+| 4  | Max   | 90000  | 1            |
++----+-------+--------+--------------+
+Department 表包含公司所有部门的信息。
+
++----+----------+
+| Id | Name     |
++----+----------+
+| 1  | IT       |
+| 2  | Sales    |
++----+----------+
+编写一个 SQL 查询，找出每个部门工资最高的员工。例如，根据上述给定的表格，Max 在 IT 部门有最高工资，Henry 在 Sales 部门有最高工资。
+
++------------+----------+--------+
+| Department | Employee | Salary |
++------------+----------+--------+
+| IT         | Max      | 90000  |
+| Sales      | Henry    | 80000  |
++------------+----------+--------+
+*/
+create table Employee
+(
+    Id           int,
+    Name         varchar(20),
+    Salary       bigint,
+    DepartmentId int,
+    primary key (Id)
+);
+create table Department
+(
+    Id   int,
+    Name varchar(20),
+    primary key (Id)
+);
+insert into Employee (Id, Name, Salary, DepartmentId)
+values (1, 'Joe', 70000, 1),
+       (2, 'Henry', 80000, 2),
+       (3, 'Sam', 60000, 2),
+       (4, 'Max', 90000, 1);
+insert into Department (Id, Name)
+VALUES (1, 'IT'),
+       (2, 'Sales');
+# in 能多个字段，自己解与官方解相同
+# select d.Name as Department,e.Name as Employee,e.Salary
+# from Employee e,Department d where e.DepartmentId = d.Id
+# and (e.Salary,e.DepartmentId) in (select max(Salary),DepartmentId
+#                  from Employee
+#                  group by DepartmentId);
+
+/*Employee 表包含所有员工信息，每个员工有其对应的工号 Id，姓名 Name，工资 Salary 和部门编号 DepartmentId 。
+
++----+-------+--------+--------------+
+| Id | Name  | Salary | DepartmentId |
++----+-------+--------+--------------+
+| 1  | Joe   | 85000  | 1            |
+| 2  | Henry | 80000  | 2            |
+| 3  | Sam   | 60000  | 2            |
+| 4  | Max   | 90000  | 1            |
+| 5  | Janet | 69000  | 1            |
+| 6  | Randy | 85000  | 1            |
+| 7  | Will  | 70000  | 1            |
++----+-------+--------+--------------+
+Department 表包含公司所有部门的信息。
+
++----+----------+
+| Id | Name     |
++----+----------+
+| 1  | IT       |
+| 2  | Sales    |
++----+----------+
+编写一个 SQL 查询，找出每个部门获得前三高工资的所有员工。例如，根据上述给定的表，查询结果应返回：
+
++------------+----------+--------+
+| Department | Employee | Salary |
++------------+----------+--------+
+| IT         | Max      | 90000  |
+| IT         | Randy    | 85000  |
+| IT         | Joe      | 85000  |
+| IT         | Will     | 70000  |
+| Sales      | Henry    | 80000  |
+| Sales      | Sam      | 60000  |
++------------+----------+--------+
+解释：
+
+IT 部门中，Max 获得了最高的工资，Randy 和 Joe 都拿到了第二高的工资，Will 的工资排第三。销售部门（Sales）只有两名员工，Henry 的工资最高，Sam 的工资排第二。
 */
